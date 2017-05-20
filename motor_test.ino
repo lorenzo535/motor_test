@@ -9,15 +9,15 @@ unsigned long tag_on_sensor_time, previous_tag_on_sensor_time;
 
 //motor A connected between A01 and A02
 //motor B connected between B01 and B02
-#define POS_MIN 350
-#define POS_MAX 700
+#define POS_MIN 20   //LOCK position
+#define POS_MAX 450 //UNLOCK position
 
 #define OUT_LIMIT POS_MIN
 #define IN_LIMIT POS_MAX
 #define RANGE POS_MAX - POS_MIN
-#define MARGIN RANGE/10
+#define MARGIN 5 //RANGE/10
 
-#define ACTUATOR_SPEED 200
+#define ACTUATOR_SPEED 255
 
 #define DIRECTION_OUT  1
 #define DIRECTION_IN   0
@@ -31,6 +31,10 @@ int STBY = 7; //standby
 int current_state;
 int button_old;
 #define BUTTON_IN 2
+long int time_started;
+long int delta;
+#define MAX_RUNNING_TIME_MS 1000
+#define KEEP_CLUTCH_ON 0
 
 //Motor A
 int PWMA = 3; //Speed control 
@@ -76,7 +80,9 @@ void loop(){
 
 //Serial.print(digitalRead(BUTTON_IN));
 //Serial.println();
+
 RunProgram( DetectTag()|ButtonPressed() );
+//limits_ok(0);
 
    
   
@@ -152,23 +158,40 @@ void RunProgram(bool click)
 {
 
   //keep clutch on
-  move(2, 255, 1); //motor 2, full speed, left
-  
+  //if (KEEP_CLUTCH_ON)
+   // move(2, 255, 1); //motor 2, full speed, left
+
   switch (current_state)
   {
     case STATE_STOPPED :
     //digitalWrite(STBY, LOW); //disable motors
+    //clutch off
+    move(2, 255, 0); //motor 2, full speed, left
+    move(1, 0, 1); //motor 1, stop, 
     if (click)    
     {
       current_state= STATE_RUNNING;    
       command = !command;
-           
+      time_started = millis();     
+      
     }
 
     break;
 
     case STATE_RUNNING :
-        
+
+      //clutch on
+      move(2, 255, 1); //motor 2, full speed, left
+      //timeout      
+      delta  = millis()-time_started;
+      //Serial.print("delta :");
+      //Serial.println(delta);
+      if ( delta >= MAX_RUNNING_TIME_MS) 
+      {        
+        current_state= STATE_STOPPED; 
+        break;
+      }  
+          
       if (!limits_ok(command))
       {
       //command = !command;
@@ -181,12 +204,7 @@ void RunProgram(bool click)
   
   }
   
-  
-
-
-
-
-  
+    
 }
   
 /* 
@@ -249,6 +267,7 @@ boolean limits_ok(int direction)
 {
 
     position = analogRead(A6);
+    Serial.print ("position:");
     Serial.println (position);
     
     if ((direction ==1)&& (position <= POS_MIN))
