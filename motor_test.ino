@@ -36,6 +36,21 @@ long int delta;
 #define MAX_RUNNING_TIME_MS 1000
 #define KEEP_CLUTCH_ON 0
 
+////////////////   KEYS DEFINITION //////
+
+String keys_table[]  = {
+  "55 79 0B AB",
+  "FA 1A 90 AB",
+  "41 8E DC 2B",
+  "B3 2E DC 2B",
+  "70 72 DC 2B",
+  "FA 62 DC 2B"
+};
+
+#define KEYTABLESIZE 6 
+////////////////   END KEYS DEFINITION //////
+
+
 //Motor A
 int PWMA = 3; //Speed control 
 int AIN1 = 9; //Direction
@@ -83,10 +98,7 @@ void loop(){
 
 RunProgram( DetectTag()|ButtonPressed() );
 //limits_ok(0);
-
-   
-  
-
+    
 return;
 }
 
@@ -126,11 +138,11 @@ if ( mfrc522.PICC_IsNewCardPresent())
        content.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " "));
        content.concat(String(mfrc522.uid.uidByte[i], HEX));
     }
-    //Serial.println();
+    Serial.println();
     //Serial.print("Message : ");
     content.toUpperCase();
-    if ((content.substring(1) == "55 79 0B AB") || (content.substring(1) =="FA 1A 90 AB"))
-    {      
+    if (KeyIsKnown(content.substring(1)))
+    {              
         tag_on_sensor_time = millis();     
     }
   
@@ -205,6 +217,19 @@ void RunProgram(bool click)
   }
   
     
+}
+
+bool KeyIsKnown (String received_key)
+{
+
+  int i = 0;
+
+  for (i = 0; i < KEYTABLESIZE; i++)
+    if (received_key == keys_table[i])
+      return true;
+
+  return false;
+  
 }
   
 /* 
